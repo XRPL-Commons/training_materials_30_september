@@ -1,6 +1,6 @@
-import { JsonRpcSigner, ethers } from 'ethers'
-import { FC, ReactNode, createContext, useContext, useEffect, useState } from 'react'
-import { SimpleBankContract, simpleBankAbi, simpleBankAddress } from '../../contracts/index'
+import { ethers, JsonRpcSigner } from "ethers"
+import { createContext, FC, ReactNode, useContext, useEffect, useState } from "react"
+import { SimpleBankContract, simpleBankAbi, simpleBankAddress } from "../../contracts"
 
 export type Web3ContextApi = {
   account: string
@@ -18,7 +18,7 @@ type Props = {
 }
 
 export const Web3Provider: FC<Props> = ({ children }) => {
-  const [account, setAccount] = useState('')
+  const [account, setAccount] = useState("")
   const [contract, setContract] = useState<SimpleBankContract | null>(null)
   const [signer, setSigner] = useState<JsonRpcSigner | null>(null)
   const [isOwner, setIsOwner] = useState(false)
@@ -41,7 +41,7 @@ export const Web3Provider: FC<Props> = ({ children }) => {
   const switchToXRPLNetwork = async (provider: ethers.BrowserProvider) => {
     if (!ethereum) return
 
-    // Check current chain ID first
+    // Check current chain ID first to avoid unnecessary switches
     try {
       const currentNetwork = await provider.getNetwork()
       const currentChainId = currentNetwork.chainId
@@ -77,43 +77,36 @@ export const Web3Provider: FC<Props> = ({ children }) => {
 
   const connectWallet = async () => {
     if (!ethereum) {
-      console.error('MetaMask is not installed')
+      console.error("MetaMask is not installed")
       return
     }
 
-    // First switch to XRPL EVM Testnet
+    // TODO Step 1 - Create provider first
+    // Hint: const provider = new ethers.BrowserProvider(ethereum)
 
-    const provider = new ethers.BrowserProvider(ethereum)
-    await switchToXRPLNetwork(provider)
+    // TODO: Switch to XRPL EVM Testnet using the provider
+    // Hint: await switchToXRPLNetwork(provider)
 
-    const signer = await provider.getSigner()
-    setSigner(signer)
+    // TODO Step 2 - Get signer after network switch
+    // Hint: const signer = await provider.getSigner()
+    // Hint: setSigner(signer)
 
-    // Connect to MetaMask
-    const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
-    const address = accounts[0]
-    setAccount(address)
+    // TODO Step 3 - Connect to MetaMask and get accounts
+    // Hint: const accounts = await ethereum.request({ method: "eth_requestAccounts" })
+    // Hint: const address = accounts[0]
+    // Hint: setAccount(address)
 
-    // Set the contract using the signer, ABI, and address
-    const contractInstance = new ethers.Contract(
-      simpleBankAddress,
-      simpleBankAbi,
-      signer
-    ) as SimpleBankContract
-    setContract(contractInstance)
+    // TODO Step 4 - Create contract instance with typed interface
+    // Hint: const contractInstance = new ethers.Contract(simpleBankAddress, simpleBankAbi, signer) as SimpleBankContract
+    // Hint: setContract(contractInstance)
 
-    // Check if the connected metamask address is the one that deployed the contract
-    try {
-      const owner = await contractInstance.owner()
-      setIsOwner(owner === signer.address)
-    } catch (error) {
-      console.error('Error checking owner:', error)
-      setIsOwner(false)
-    }
+    // TODO Step 5 - Check if connected address is the contract owner
+    // Hint: Use try/catch and contractInstance.owner() to check ownership
+    // Hint: setIsOwner(owner === signer.address)
   }
 
   const disconnect = () => {
-    setAccount('')
+    setAccount("")
     setSigner(null)
     setContract(null)
     setIsOwner(false)
@@ -121,7 +114,7 @@ export const Web3Provider: FC<Props> = ({ children }) => {
 
   useEffect(() => {
     if (ethereum) {
-      ethereum.on('accountsChanged', () => {
+      ethereum.on("accountsChanged", () => {
         disconnect()
         connectWallet()
       })
@@ -143,7 +136,7 @@ export const Web3Provider: FC<Props> = ({ children }) => {
 export const useWeb3 = () => {
   const context = useContext(Web3Context)
   if (!context) {
-    throw new Error('useWeb3 must be used inside Web3Provider')
+    throw new Error("useWeb3 must be used inside Web3Provider")
   }
   return context
 }

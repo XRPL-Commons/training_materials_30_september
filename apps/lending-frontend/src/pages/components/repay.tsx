@@ -29,8 +29,10 @@ export const Repay = () => {
 
   // call the contract to repay the loan
   const onSubmit: SubmitHandler<RepayForm> = async ({ amount }) => {
-    if (!contract) return
-    await contract.repayLoan({ value: ethers.parseEther(amount) })
+    // TODO: Implement the repay function
+    // Hint: Use contract.repayLoan({ value: ethers.parseEther(amount) })
+    // Remember to handle try/catch for errors
+    alert("TODO: Implement repay using contract.repayLoan({ value: ethers.parseEther(amount) })")
   }
 
   return (
