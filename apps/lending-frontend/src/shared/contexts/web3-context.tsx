@@ -1,11 +1,11 @@
-import { ethers, JsonRpcSigner, Contract } from "ethers"
-import { createContext, FC, ReactNode, useContext, useEffect, useState } from "react"
-import { simpleBankAbi, simpleBankAddress } from "../../contracts/contract-address"
+import { JsonRpcSigner, ethers } from 'ethers'
+import { FC, ReactNode, createContext, useContext, useEffect, useState } from 'react'
+import { SimpleBankContract, simpleBankAbi, simpleBankAddress } from '../../contracts/index'
 
 export type Web3ContextApi = {
   account: string
   connectWallet: () => void
-  contract: Contract | null
+  contract: SimpleBankContract | null
   disconnect: () => void
   isOwner: boolean
   signer: JsonRpcSigner | null
@@ -18,51 +18,102 @@ type Props = {
 }
 
 export const Web3Provider: FC<Props> = ({ children }) => {
-  const [account, setAccount] = useState("")
-  const [contract, setContract] = useState<Contract | null>(null)
+  const [account, setAccount] = useState('')
+  const [contract, setContract] = useState<SimpleBankContract | null>(null)
   const [signer, setSigner] = useState<JsonRpcSigner | null>(null)
   const [isOwner, setIsOwner] = useState(false)
 
   const { ethereum } = window
 
+  const XRPL_EVM_TESTNET_CHAIN_ID = 1449000n
+  const XRPL_EVM_TESTNET_CONFIG = {
+    chainId: `0x${XRPL_EVM_TESTNET_CHAIN_ID.toString(16)}`,
+    chainName: 'XRPL EVM Sidechain Testnet',
+    nativeCurrency: {
+      name: 'XRP',
+      symbol: 'XRP',
+      decimals: 18,
+    },
+    rpcUrls: ['https://rpc-evm-sidechain.xrpl.org'],
+    blockExplorerUrls: ['https://evm-sidechain.xrpl.org'],
+  }
+
+  const switchToXRPLNetwork = async (provider: ethers.BrowserProvider) => {
+    if (!ethereum) return
+
+    // Check current chain ID first
+    try {
+      const currentNetwork = await provider.getNetwork()
+      const currentChainId = currentNetwork.chainId
+      if (currentChainId === XRPL_EVM_TESTNET_CHAIN_ID) {
+        console.log('Already on XRPL EVM Testnet')
+        return
+      }
+    } catch (error) {
+      console.error('Failed to get current chain ID:', error)
+    }
+
+    try {
+      await ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: XRPL_EVM_TESTNET_CONFIG.chainId }],
+      })
+    } catch (switchError: any) {
+      // This error code indicates that the chain has not been added to MetaMask.
+      if (switchError.code === 4902) {
+        try {
+          await ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [XRPL_EVM_TESTNET_CONFIG],
+          })
+        } catch (addError) {
+          console.error('Failed to add XRPL EVM Testnet:', addError)
+        }
+      } else {
+        console.error('Failed to switch to XRPL EVM Testnet:', switchError)
+      }
+    }
+  }
+
   const connectWallet = async () => {
     if (!ethereum) {
-      console.error("MetaMask is not installed")
+      console.error('MetaMask is not installed')
       return
     }
 
-    // Step 1
-    // Define a new provider as ethers.BrowserProvider
-    //const provider = new ethers.BrowserProvider(ethereum)
-    // Get the provider's signer
-    //const signer = await provider.getSigner()
-    // Set in state (setSigner)
-    //setSigner(signer)
+    // First switch to XRPL EVM Testnet
 
-    // Step 2 - Connect to MetaMask
-    // Request the eth_requestAccounts
-    //const accounts = await ethereum.request({ method: "eth_requestAccounts" })
-    // Get the the first account from the eth_requestAccounts list
-    //const address = accounts[0]
-    // Set it in state (setAccount)
-    //setAccount(address)
+    const provider = new ethers.BrowserProvider(ethereum)
+    await switchToXRPLNetwork(provider)
 
-    // Step 3 - Set the contract (setContract) using the signer and the ABI/address
-    //const contractInstance = new ethers.Contract(simpleBankAddress, simpleBankAbi, signer)
-    //setContract(contractInstance)
+    const signer = await provider.getSigner()
+    setSigner(signer)
 
-    // Step 4 - Check if the connected metamask address is the one that deployed the contract (setIsOwner)
-    /*try {
+    // Connect to MetaMask
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
+    const address = accounts[0]
+    setAccount(address)
+
+    // Set the contract using the signer, ABI, and address
+    const contractInstance = new ethers.Contract(
+      simpleBankAddress,
+      simpleBankAbi,
+      signer
+    ) as SimpleBankContract
+    setContract(contractInstance)
+
+    // Check if the connected metamask address is the one that deployed the contract
+    try {
       const owner = await contractInstance.owner()
       setIsOwner(owner === signer.address)
     } catch (error) {
-      console.error("Error checking owner:", error)
+      console.error('Error checking owner:', error)
       setIsOwner(false)
-    }*/
+    }
   }
 
   const disconnect = () => {
-    setAccount("")
+    setAccount('')
     setSigner(null)
     setContract(null)
     setIsOwner(false)
@@ -70,7 +121,7 @@ export const Web3Provider: FC<Props> = ({ children }) => {
 
   useEffect(() => {
     if (ethereum) {
-      ethereum.on("accountsChanged", () => {
+      ethereum.on('accountsChanged', () => {
         disconnect()
         connectWallet()
       })
@@ -92,7 +143,7 @@ export const Web3Provider: FC<Props> = ({ children }) => {
 export const useWeb3 = () => {
   const context = useContext(Web3Context)
   if (!context) {
-    throw new Error("useWeb3 must be used inside Web3Provider")
+    throw new Error('useWeb3 must be used inside Web3Provider')
   }
   return context
 }
