@@ -12,7 +12,9 @@ import {
   InputLeftElement,
   Text,
 } from "@chakra-ui/react"
+import { ethers } from "ethers"
 import { SubmitHandler, useForm } from "react-hook-form"
+import { useWeb3 } from "../../shared/contexts"
 
 type RepayForm = {
   amount: string
@@ -23,12 +25,14 @@ type RepayForm = {
  */
 export const Repay = () => {
   const { register, handleSubmit } = useForm<RepayForm>()
-  // const { contract } = useWeb3()
+  const { contract } = useWeb3()
 
   // call the contract to repay the loan
   const onSubmit: SubmitHandler<RepayForm> = async ({ amount }) => {
-    // todo: code the function
-    alert("Code the repay function")
+    // TODO: Implement the repay function
+    // Hint: Use contract.repayLoan({ value: ethers.parseEther(amount) })
+    // Remember to handle try/catch for errors
+    alert("TODO: Implement repay using contract.repayLoan({ value: ethers.parseEther(amount) })")
   }
 
   return (
