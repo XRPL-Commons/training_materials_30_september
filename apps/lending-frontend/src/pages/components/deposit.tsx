@@ -31,8 +31,10 @@ export const Deposit = () => {
   const { contract } = useWeb3()
 
   const onSubmit: SubmitHandler<DepositForm> = async ({ amount }) => {
-    if (!contract) return
-    await contract.deposit({ value: ethers.parseEther(amount) })
+    // TODO: Implement the deposit function
+    // Hint: Use contract.deposit({ value: ethers.parseEther(amount) })
+    // Remember to handle try/catch for errors
+    alert("TODO: Implement deposit using contract.deposit({ value: ethers.parseEther(amount) })")
   }
 
   return (

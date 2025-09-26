@@ -6,8 +6,10 @@ export const HomePage = () => {
   const { contract, isOwner } = useWeb3()
 
   const onWithdrawHandler = async () => {
-    if (!contract) return
-    await contract.withdraw()
+    // TODO: Implement the withdraw function
+    // Hint: Use contract.withdraw()
+    // Remember to handle try/catch for errors
+    alert("TODO: Implement withdraw using contract.withdraw()")
   }
 
   if (!contract) {
