@@ -4,7 +4,7 @@ import "@fontsource-variable/open-sans"
 import "@fontsource-variable/spline-sans"
 import { AppLayout } from "./app-layouts"
 import { HomePage } from "./pages"
-import { Web3Provider } from "./shared/contexts"
+import { Web3Provider, XamanProvider } from "./shared/contexts"
 
 export const App = () => {
   const proTheme = extendTheme(theme)
@@ -16,11 +16,13 @@ export const App = () => {
 
   return (
     <ChakraProvider theme={myTheme}>
-      <Web3Provider>
-        <AppLayout>
-          <HomePage />
-        </AppLayout>
-      </Web3Provider>
+      <XamanProvider>
+        <Web3Provider>
+          <AppLayout>
+            <HomePage />
+          </AppLayout>
+        </Web3Provider>
+      </XamanProvider>
     </ChakraProvider>
   )
 }

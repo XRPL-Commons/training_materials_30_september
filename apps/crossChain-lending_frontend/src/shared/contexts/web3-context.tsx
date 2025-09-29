@@ -9,6 +9,7 @@ export type Web3ContextApi = {
   disconnect: () => void
   isOwner: boolean
   signer: JsonRpcSigner | null
+  bridgeToXRPL: (amount: string, xrplAddress: string) => Promise<string | null>
 }
 
 const Web3Context = createContext<Web3ContextApi | null>(null)
@@ -77,7 +78,7 @@ export const Web3Provider: FC<Props> = ({ children }) => {
 
   const connectWallet = async () => {
     if (!ethereum) {
-      console.error("MetaMask is not installed")
+      console.error('MetaMask is not installed')
       return
     }
 
@@ -92,7 +93,7 @@ export const Web3Provider: FC<Props> = ({ children }) => {
     // Hint: setSigner(signer)
 
     // TODO Step 3 - Connect to MetaMask and get accounts
-    // Hint: const accounts = await ethereum.request({ method: "eth_requestAccounts" })
+    // Hint: const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
     // Hint: const address = accounts[0]
     // Hint: setAccount(address)
 
@@ -106,15 +107,51 @@ export const Web3Provider: FC<Props> = ({ children }) => {
   }
 
   const disconnect = () => {
-    setAccount("")
+    setAccount('')
     setSigner(null)
     setContract(null)
     setIsOwner(false)
   }
 
+  const bridgeToXRPL = async (amount: string, xrplAddress: string): Promise<string | null> => {
+    if (!signer) {
+      throw new Error('No signer available')
+    }
+
+    try {
+      // TODO Step 1 - Convert amount to wei (18 decimals)
+      // Hint: const amountWei = ethers.parseEther(amount)
+
+      // TODO Step 2 - Create contract interface for Axelar
+      // Hint: You'll need to call the interchainTransfer function on the Axelar contract
+      // Hint: Contract address: '0xB5FB4BE02232B1bBA4dC8f81dc24C26980dE9e3C'
+      // Hint: Use the ABI with interchainTransfer function
+
+      // TODO Step 3 - Call interchainTransfer with the required parameters
+      // Parameters:
+      // - tokenId: '0xba5a21ca88ef6bba2bfff5088994f90e1077e2a1cc3dcc38bd261f00fce2824f'
+      // - destinationChain: 'xrpl'
+      // - destinationAddress: ethers.hexlify(ethers.toUtf8Bytes(xrplAddress))
+      // - amount: amountWei
+      // - metadata: '0x'
+      // - gasValue: ethers.parseEther('0.5')
+      // - value: 0n (msg.value)
+
+      // TODO Step 4 - Return the transaction hash
+      // Hint: return tx.hash
+
+      console.log('Bridge to XRPL - Amount:', amount, 'Address:', xrplAddress)
+      alert('TODO: Implement EVM to XRPL bridge using Axelar interchainTransfer')
+      return null
+    } catch (error) {
+      console.error('Error bridging to XRPL:', error)
+      throw error
+    }
+  }
+
   useEffect(() => {
     if (ethereum) {
-      ethereum.on("accountsChanged", () => {
+      ethereum.on('accountsChanged', () => {
         disconnect()
         connectWallet()
       })
@@ -128,6 +165,7 @@ export const Web3Provider: FC<Props> = ({ children }) => {
     disconnect,
     isOwner,
     signer,
+    bridgeToXRPL,
   }
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>
@@ -136,7 +174,7 @@ export const Web3Provider: FC<Props> = ({ children }) => {
 export const useWeb3 = () => {
   const context = useContext(Web3Context)
   if (!context) {
-    throw new Error("useWeb3 must be used inside Web3Provider")
+    throw new Error('useWeb3 must be used inside Web3Provider')
   }
   return context
 }

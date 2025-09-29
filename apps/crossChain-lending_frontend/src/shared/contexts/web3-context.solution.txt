@@ -1,6 +1,6 @@
-import { JsonRpcSigner, ethers } from 'ethers'
-import { FC, ReactNode, createContext, useContext, useEffect, useState } from 'react'
-import { SimpleBankContract, simpleBankAbi, simpleBankAddress } from '../../contracts/index'
+import { ethers, JsonRpcSigner } from 'ethers'
+import { createContext, FC, ReactNode, useContext, useEffect, useState } from 'react'
+import { simpleBankAbi, simpleBankAddress, SimpleBankContract } from '../../contracts'
 
 export type Web3ContextApi = {
   account: string
@@ -9,6 +9,7 @@ export type Web3ContextApi = {
   disconnect: () => void
   isOwner: boolean
   signer: JsonRpcSigner | null
+  bridgeToXRPL: (amount: string, xrplAddress: string) => Promise<string | null>
 }
 
 const Web3Context = createContext<Web3ContextApi | null>(null)
@@ -41,7 +42,7 @@ export const Web3Provider: FC<Props> = ({ children }) => {
   const switchToXRPLNetwork = async (provider: ethers.BrowserProvider) => {
     if (!ethereum) return
 
-    // Check current chain ID first
+    // Check current chain ID first to avoid unnecessary switches
     try {
       const currentNetwork = await provider.getNetwork()
       const currentChainId = currentNetwork.chainId
@@ -81,20 +82,22 @@ export const Web3Provider: FC<Props> = ({ children }) => {
       return
     }
 
-    // First switch to XRPL EVM Testnet
-
+    // Step 1 - Create provider first
     const provider = new ethers.BrowserProvider(ethereum)
+
+    // Switch to XRPL EVM Testnet using the provider
     await switchToXRPLNetwork(provider)
 
+    // Step 2 - Get signer after network switch
     const signer = await provider.getSigner()
     setSigner(signer)
 
-    // Connect to MetaMask
+    // Step 3 - Connect to MetaMask and get accounts
     const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
     const address = accounts[0]
     setAccount(address)
 
-    // Set the contract using the signer, ABI, and address
+    // Step 4 - Create contract instance with typed interface
     const contractInstance = new ethers.Contract(
       simpleBankAddress,
       simpleBankAbi,
@@ -102,12 +105,12 @@ export const Web3Provider: FC<Props> = ({ children }) => {
     ) as SimpleBankContract
     setContract(contractInstance)
 
-    // Check if the connected metamask address is the one that deployed the contract
+    // Step 5 - Check if connected address is the contract owner
     try {
       const owner = await contractInstance.owner()
       setIsOwner(owner === signer.address)
     } catch (error) {
-      console.error('Error checking owner:', error)
+      console.error('Failed to check ownership:', error)
       setIsOwner(false)
     }
   }
@@ -117,6 +120,83 @@ export const Web3Provider: FC<Props> = ({ children }) => {
     setSigner(null)
     setContract(null)
     setIsOwner(false)
+  }
+
+  const bridgeToXRPL = async (amount: string, xrplAddress: string): Promise<string | null> => {
+    if (!signer) {
+      throw new Error('No signer available')
+    }
+
+    try {
+      // Step 1 - Convert amount to wei (18 decimals)
+      const amountWei = ethers.parseEther(amount)
+
+      // Step 2 - Create contract interface for Axelar
+      const axelarContract = new ethers.Contract(
+        '0xB5FB4BE02232B1bBA4dC8f81dc24C26980dE9e3C',
+        [
+          {
+            inputs: [
+              {
+                internalType: 'bytes32',
+                name: 'tokenId',
+                type: 'bytes32',
+              },
+              {
+                internalType: 'string',
+                name: 'destinationChain',
+                type: 'string',
+              },
+              {
+                internalType: 'bytes',
+                name: 'destinationAddress',
+                type: 'bytes',
+              },
+              {
+                internalType: 'uint256',
+                name: 'amount',
+                type: 'uint256',
+              },
+              {
+                internalType: 'bytes',
+                name: 'metadata',
+                type: 'bytes',
+              },
+              {
+                internalType: 'uint256',
+                name: 'gasValue',
+                type: 'uint256',
+              },
+            ],
+            name: 'interchainTransfer',
+            outputs: [],
+            stateMutability: 'payable',
+            type: 'function',
+          },
+        ],
+        signer
+      )
+
+      // Step 3 - Call interchainTransfer with the required parameters
+      const tx = await axelarContract.interchainTransfer(
+        '0xba5a21ca88ef6bba2bfff5088994f90e1077e2a1cc3dcc38bd261f00fce2824f', // tokenId
+        'xrpl', // destinationChain
+        ethers.hexlify(ethers.toUtf8Bytes(xrplAddress)), // destinationAddress (encoded)
+        amountWei, // amount
+        '0x', // metadata
+        ethers.parseEther('0.5'), // gasValue
+        {
+          value: 0n, // msg.value
+        }
+      )
+
+      // Step 4 - Return the transaction hash
+      console.log('Bridge to XRPL transaction submitted:', tx.hash)
+      return tx.hash
+    } catch (error) {
+      console.error('Error bridging to XRPL:', error)
+      throw error
+    }
   }
 
   useEffect(() => {
@@ -135,6 +215,7 @@ export const Web3Provider: FC<Props> = ({ children }) => {
     disconnect,
     isOwner,
     signer,
+    bridgeToXRPL,
   }
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>
